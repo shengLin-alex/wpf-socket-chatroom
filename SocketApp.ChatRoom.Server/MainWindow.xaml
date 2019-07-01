@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        <TextBox Name="ClientListText" HorizontalAlignment="Left" Height="268" Margin="61,64,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="287" />
+        <TextBox Name="ClientListText" HorizontalAlignment="Left" Height="268" Margin="61,64,0,0" TextWrapping="Wrap" Text="{Binding Path=Message}" VerticalAlignment="Top" Width="287" />
         <Button Content="Start Listen" HorizontalAlignment="Left" VerticalAlignment="Top" Width="164" Margin="418,158,0,0" Height="71" Click="StartListenButtonClick" />
     </Grid>
 </Window>

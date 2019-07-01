@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SocketApp.ChatRoom.Client.DataBinding;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -14,30 +15,28 @@ namespace SocketApp.ChatRoom.Client
     {
         private readonly Socket ClientSocket;
 
+        private const int PORT = 7000;
+
+        private const string IP = "127.0.0.1";
+
+        // cross thread data binding context.
+        private readonly SynchronizationContext SyncContext;
+        private readonly ClientSideViewModel DataObject;
+
         /// <summary>
         /// constructor
         /// </summary>
         public MainWindow()
         {
             this.InitializeComponent();
-
-            IPAddress ip = IPAddress.Parse("127.0.0.1");
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            try
-            {
-                this.ClientSocket.Connect(new IPEndPoint(ip, 7000));
+            this.SendMessageButton.IsEnabled = false;
 
-                Thread receiveThread = new Thread(this.ReceiveMessage)
-                {
-                    IsBackground = true // make thread background, for avoiding process not really shutdown.
-                };
-                receiveThread.Start(this.ClientSocket);
-            }
-            catch
-            {
-                this.SendMessageButton.IsEnabled = false;
-                this.MessageContentLabel.Content += "Failed To Connect To Server.";
-            }
+            // setting data binding
+            this.SyncContext = SynchronizationContext.Current;
+            this.DataObject = new ClientSideViewModel();
+            this.DataObject.SetSynchronizationContext(this.SyncContext);
+            this.DataContext = this.DataObject;
         }
 
         public void Dispose()
@@ -61,10 +60,7 @@ namespace SocketApp.ChatRoom.Client
                     int receiveNumber = connection.Receive(buffer);
 
                     string receiveString = Encoding.ASCII.GetString(buffer, 0, receiveNumber);
-                    this.MessageContentLabel.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        this.MessageContentLabel.Content += $"\r\n{receiveString}";
-                    }));
+                    this.DataObject.MessageContent += $"\r\n{receiveString}";
                 }
                 catch
                 {
@@ -76,9 +72,33 @@ namespace SocketApp.ChatRoom.Client
             }
         }
 
+        private void ConnectButtonClick(object sender, RoutedEventArgs e)
+        {
+            IPAddress ip = IPAddress.Parse(IP);
+
+            try
+            {
+                this.ClientSocket.Connect(new IPEndPoint(ip, PORT));
+
+                Thread receiveThread = new Thread(this.ReceiveMessage)
+                {
+                    IsBackground = true // make thread background, for avoiding process not really shutdown.
+                };
+                receiveThread.Start(this.ClientSocket);
+
+                this.SendMessageButton.IsEnabled = true;
+                this.ConnectButton.IsEnabled = false;
+            }
+            catch
+            {
+                this.SendMessageButton.IsEnabled = false;
+                this.DataObject.MessageContent += "Failed To Connect To Server. Retry Later...\r\n";
+            }
+        }
+
         private void SendMessageButtonClick(object sender, RoutedEventArgs e)
         {
-            string text = this.MessageInputText.Text;
+            string text = this.DataObject.MessageInput;
 
             try
             {
@@ -86,7 +106,7 @@ namespace SocketApp.ChatRoom.Client
             }
             catch
             {
-                this.MessageContentLabel.Content = "Failed To Connect To Server";
+                this.DataObject.MessageContent = "Failed To Connect To Server.\r\n";
                 this.ClientSocket.Shutdown(SocketShutdown.Both);
                 this.ClientSocket.Close();
             }
