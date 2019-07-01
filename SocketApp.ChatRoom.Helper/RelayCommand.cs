@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Helper
@@ -8,8 +7,8 @@ namespace SocketApp.ChatRoom.Helper
     {
         #region Members
 
-        private readonly Func<Boolean> _canExecute;
-        private readonly Action _execute;
+        private readonly Func<Boolean> CanExecuteField;
+        private readonly Action ExecuteField;
 
         #endregion Members
 
@@ -27,8 +26,8 @@ namespace SocketApp.ChatRoom.Helper
                 throw new ArgumentNullException("execute");
             }
 
-            this._execute = execute;
-            this._canExecute = canExecute;
+            this.ExecuteField = execute;
+            this.CanExecuteField = canExecute;
         }
 
         #endregion Constructors
@@ -39,29 +38,28 @@ namespace SocketApp.ChatRoom.Helper
         {
             add
             {
-                if (this._canExecute != null)
+                if (this.CanExecuteField != null)
                 {
                     CommandManager.RequerySuggested += value;
                 }
             }
             remove
             {
-                if (this._canExecute != null)
+                if (this.CanExecuteField != null)
                 {
                     CommandManager.RequerySuggested -= value;
                 }
             }
         }
 
-        [DebuggerStepThrough]
-        public Boolean CanExecute(Object parameter)
+        public bool CanExecute(Object parameter)
         {
-            return this._canExecute == null ? true : this._canExecute();
+            return this.CanExecuteField == null ? true : this.CanExecuteField();
         }
 
         public void Execute(Object parameter)
         {
-            this._execute();
+            this.ExecuteField();
         }
 
         #endregion ICommand Members
