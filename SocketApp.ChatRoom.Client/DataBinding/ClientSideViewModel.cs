@@ -15,13 +15,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         private const int PORT = 7000;
         private const string IP = "127.0.0.1";
 
-        private string MessageInputField = "";
-        private string MessageContentField = "";
-        private bool IsSendMessageButtonEnableField = false;
-        private bool IsConnectButtonEnableField = true;
+        private BindingDataModel BindingData;
 
         public ClientSideViewModel()
         {
+            this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
 
@@ -35,11 +33,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         {
             get
             {
-                return this.MessageInputField;
+                return this.BindingData.MessageInput;
             }
             set
             {
-                this.MessageInputField = value;
+                this.BindingData.MessageInput = value;
                 this.OnPropertyChanged(nameof(this.MessageInput));
             }
         }
@@ -48,11 +46,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         {
             get
             {
-                return this.MessageContentField;
+                return this.BindingData.MessageContent;
             }
             set
             {
-                this.MessageContentField = value;
+                this.BindingData.MessageContent = value;
                 this.OnPropertyChanged(nameof(this.MessageContent));
             }
         }
@@ -61,11 +59,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         {
             get
             {
-                return this.IsSendMessageButtonEnableField;
+                return this.BindingData.IsSendMessageButtonEnable;
             }
             set
             {
-                this.IsSendMessageButtonEnableField = value;
+                this.BindingData.IsSendMessageButtonEnable = value;
                 this.OnPropertyChanged(nameof(this.IsSendMessageButtonEnable));
             }
         }
@@ -74,11 +72,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         {
             get
             {
-                return this.IsConnectButtonEnableField;
+                return this.BindingData.IsConnectButtonEnable;
             }
             set
             {
-                this.IsConnectButtonEnableField = value;
+                this.BindingData.IsConnectButtonEnable = value;
                 this.OnPropertyChanged(nameof(this.IsConnectButtonEnable));
             }
         }
