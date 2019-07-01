@@ -95,6 +95,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\SocketApp.ChatRoom.Helper\SocketApp.ChatRoom.Helper.csproj">
+      <Project>{d07cd0df-e025-401c-91c1-d8c1fae55a17}</Project>
+      <Name>SocketApp.ChatRoom.Helper</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

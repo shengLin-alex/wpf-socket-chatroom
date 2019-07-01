@@ -8,8 +8,8 @@
         Title="MainWindow" Height="450" Width="800">
     <Grid>
         <TextBox Name="MessageInputText" HorizontalAlignment="Left" Height="60" Margin="126,265,0,0" TextWrapping="Wrap" Text="{Binding Path=MessageInput}" VerticalAlignment="Top" Width="319"/>
-        <Button Name="SendMessageButton" Content="Send Message" HorizontalAlignment="Left" Margin="600,265,0,0" VerticalAlignment="Top" Width="94" Height="60" Click="SendMessageButtonClick"/>
-        <Button Name="ConnectButton" Content="Connect" HorizontalAlignment="Left" Margin="471,265,0,0" VerticalAlignment="Top" Width="96" Height="60" Click="ConnectButtonClick"/>
+        <Button Name="SendMessageButton" Content="Send Message" HorizontalAlignment="Left" Margin="600,265,0,0" VerticalAlignment="Top" Width="94" Height="60" Command="{Binding TrySendMessage}" IsEnabled="{Binding Path=IsSendMessageButtonEnable}" />
+        <Button Name="ConnectButton" Content="Connect" HorizontalAlignment="Left" Margin="471,265,0,0" VerticalAlignment="Top" Width="96" Height="60" Command="{Binding TryConnectToServer}" IsEnabled="{Binding Path=IsConnectButtonEnable}" />
         <TextBox Name="MessageContentText" HorizontalAlignment="Left" Height="193" Margin="126,49,0,0" TextWrapping="Wrap" Text="{Binding Path=MessageContent}" IsReadOnly="true" VerticalAlignment="Top" Width="568"/>
     </Grid>
 </Window>

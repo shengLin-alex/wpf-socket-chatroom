@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketApp.ChatRoom.Server",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketApp.ChatRoom.Client", "SocketApp.ChatRoom.Client\SocketApp.ChatRoom.Client.csproj", "{545A8477-BCAC-41F1-A068-F5CE25A7DAA3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketApp.ChatRoom.Helper", "SocketApp.ChatRoom.Helper\SocketApp.ChatRoom.Helper.csproj", "{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{545A8477-BCAC-41F1-A068-F5CE25A7DAA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{545A8477-BCAC-41F1-A068-F5CE25A7DAA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{545A8477-BCAC-41F1-A068-F5CE25A7DAA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
