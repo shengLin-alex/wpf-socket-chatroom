@@ -124,7 +124,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                 {
                     byte[] buffer = new byte[1024]; // buffer
                     int receiveNumber = connection.Receive(buffer);
-                    string receiveString = Encoding.ASCII.GetString(buffer, 0, receiveNumber);
+                    string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
 
                     if (!(connection.RemoteEndPoint is IPEndPoint ipEndPoint))
                     {
@@ -137,7 +137,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                     string sendMessage = $"{clientIp} : {clientPort} ---> {receiveString}";
                     foreach (Socket socket in this.ClientSockets) // send message to all client.
                     {
-                        socket.Send(Encoding.ASCII.GetBytes(sendMessage));
+                        socket.Send(Encoding.UTF8.GetBytes(sendMessage));
                     }
 
                     this.Message += $"\r\n{sendMessage}";

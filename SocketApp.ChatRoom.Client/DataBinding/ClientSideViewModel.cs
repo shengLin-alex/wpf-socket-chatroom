@@ -151,7 +151,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                     byte[] buffer = new byte[1024];
                     int receiveNumber = connection.Receive(buffer);
 
-                    string receiveString = Encoding.ASCII.GetString(buffer, 0, receiveNumber);
+                    string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
                     this.MessageContent += $"\r\n{receiveString}";
                 }
                 catch
@@ -170,7 +170,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
             try
             {
-                this.ClientSocket.Send(Encoding.ASCII.GetBytes(text));
+                this.ClientSocket.Send(Encoding.UTF8.GetBytes(text));
             }
             catch
             {
