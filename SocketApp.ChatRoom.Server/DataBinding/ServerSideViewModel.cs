@@ -1,11 +1,13 @@
 ﻿using SocketApp.ChatRoom.Helper;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Server.DataBinding
@@ -17,7 +19,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         private const int PORT = 7000;
         private const string IP = "127.0.0.1";
 
-        private string MessageField = "";
+        private object SyncRoot = new object();
 
         /// <summary>
         /// constructor
@@ -26,26 +28,12 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         {
             this.ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ClientSockets = new List<Socket>();
+
+            this.ClientMessages = new ObservableCollection<string>();
+            BindingOperations.EnableCollectionSynchronization(this.ClientMessages, this.SyncRoot);
         }
 
-        public void Dispose()
-        {
-            this.ServerSocket.Shutdown(SocketShutdown.Both);
-            this.ServerSocket.Close();
-        }
-
-        public string Message
-        {
-            get
-            {
-                return this.MessageField;
-            }
-            set
-            {
-                this.MessageField = value;
-                this.OnPropertyChanged(nameof(this.Message));
-            }
-        }
+        public ObservableCollection<string> ClientMessages { get; private set; }
 
         public ICommand StartListening
         {
@@ -56,6 +44,12 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+
+        public void Dispose()
+        {
+            this.ServerSocket.Shutdown(SocketShutdown.Both);
+            this.ServerSocket.Close();
+        }
 
         private void OnPropertyChanged(string name)
         {
@@ -82,13 +76,19 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             }
             catch
             {
-                this.Message += "Server is already listening...\r\n";
+                lock (this.SyncRoot)
+                {
+                    this.ClientMessages.Add("Server is already listening...");
+                }
 
                 return;
             }
 
             this.ServerSocket.Listen(10); // up to 10 client
-            this.Message += "Start Listening...\r\n";
+            lock (this.SyncRoot)
+            {
+                this.ClientMessages.Add("Start Listening...");
+            }
 
             Thread serverThread = new Thread(() =>
             {
@@ -140,7 +140,10 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                         socket.Send(Encoding.UTF8.GetBytes(sendMessage));
                     }
 
-                    this.Message += $"\r\n{sendMessage}";
+                    lock (this.SyncRoot)
+                    {
+                        this.ClientMessages.Add(sendMessage);
+                    }
                 }
                 catch
                 {
