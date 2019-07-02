@@ -12,13 +12,34 @@ using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Server.DataBinding
 {
+    /// <summary>
+    /// Server Side ViewModel
+    /// </summary>
     public class ServerSideViewModel : INotifyPropertyChanged, IDisposable
     {
+        /// <summary>
+        /// The server socket
+        /// </summary>
         private readonly Socket ServerSocket;
+
+        /// <summary>
+        /// The client sockets
+        /// </summary>
         private readonly List<Socket> ClientSockets;
+
+        /// <summary>
+        /// Server port
+        /// </summary>
         private const int PORT = 7000;
+
+        /// <summary>
+        /// Server IP address
+        /// </summary>
         private const string IP = "127.0.0.1";
 
+        /// <summary>
+        /// Sync Root for lock
+        /// </summary>
         private object SyncRoot = new object();
 
         /// <summary>
@@ -33,8 +54,14 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             BindingOperations.EnableCollectionSynchronization(this.ClientMessages, this.SyncRoot);
         }
 
+        /// <summary>
+        /// Client Messages that send to server.
+        /// </summary>
         public ObservableCollection<string> ClientMessages { get; private set; }
 
+        /// <summary>
+        /// Binding command for Start Listening
+        /// </summary>
         public ICommand StartListening
         {
             get
@@ -43,14 +70,24 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             }
         }
 
+        /// <summary>
+        /// Property Changed event handler
+        /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
+        /// <summary>
+        /// Dispose
+        /// </summary>
         public void Dispose()
         {
             this.ServerSocket.Shutdown(SocketShutdown.Both);
             this.ServerSocket.Close();
         }
 
+        /// <summary>
+        /// Property Changed listener for data property(beside ObservableCollection)
+        /// </summary>
+        /// <param name="name"></param>
         private void OnPropertyChanged(string name)
         {
             // thread-safe call PropertyChanged
@@ -65,6 +102,9 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             return true;
         }
 
+        /// <summary>
+        /// Start Server and start a thread for receive message.
+        /// </summary>
         private void StartServer()
         {
             // localhost ip
@@ -111,6 +151,10 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             serverThread.Start();
         }
 
+        /// <summary>
+        /// Receive client message
+        /// </summary>
+        /// <param name="clientSocket">client socket</param>
         private void ReceiveMessage(object clientSocket)
         {
             if (!(clientSocket is Socket connection))
