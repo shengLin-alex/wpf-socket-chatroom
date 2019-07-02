@@ -8,17 +8,13 @@ namespace SocketApp.ChatRoom.Server
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly ServerSideViewModel ViewModel;
-
         /// <summary>
         /// constructor
         /// </summary>
         public MainWindow()
         {
             this.InitializeComponent();
-
-            this.ViewModel = new ServerSideViewModel();
-            this.DataContext = this.ViewModel;
+            this.DataContext = new ServerSideViewModel();
         }
     }
 }
