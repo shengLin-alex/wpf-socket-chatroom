@@ -25,11 +25,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            this.ReceivedMessages = new ObservableCollection<string>();
+            this.ReceivedMessages = new AsyncObservableCollection<string>();
             BindingOperations.EnableCollectionSynchronization(this.ReceivedMessages, SyncRoot);
         }
 
-        public ObservableCollection<string> ReceivedMessages { get; private set; }
+        public AsyncObservableCollection<string> ReceivedMessages { get; private set; }
 
         ~ClientSideViewModel()
         {

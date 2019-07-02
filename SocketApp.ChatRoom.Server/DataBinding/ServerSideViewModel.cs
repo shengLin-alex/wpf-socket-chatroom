@@ -52,14 +52,14 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             this.ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ClientSockets = new List<Socket>();
 
-            this.ClientMessages = new ObservableCollection<string>();
+            this.ClientMessages = new AsyncObservableCollection<string>();
             BindingOperations.EnableCollectionSynchronization(this.ClientMessages, SyncRoot);
         }
 
         /// <summary>
         /// Client Messages that send to server.
         /// </summary>
-        public ObservableCollection<string> ClientMessages { get; private set; }
+        public AsyncObservableCollection<string> ClientMessages { get; private set; }
 
         public bool IsStartButtonEnable
         {
