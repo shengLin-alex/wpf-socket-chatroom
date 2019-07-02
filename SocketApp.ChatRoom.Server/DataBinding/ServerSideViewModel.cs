@@ -1,7 +1,6 @@
 ﻿using SocketApp.ChatRoom.Helper;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
@@ -39,10 +38,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
         private bool IsStartButtonEnableField = true;
 
-        /// <summary>
-        /// Sync Root for lock
-        /// </summary>
-        private static readonly object SyncRoot = new object();
+        private object SyncRoot = new object();
 
         /// <summary>
         /// constructor
@@ -51,9 +47,8 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         {
             this.ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ClientSockets = new List<Socket>();
-
             this.ClientMessages = new AsyncObservableCollection<string>();
-            BindingOperations.EnableCollectionSynchronization(this.ClientMessages, SyncRoot);
+            BindingOperations.EnableCollectionSynchronization(this.ClientMessages, this.SyncRoot);
         }
 
         /// <summary>
@@ -147,7 +142,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             }
             catch
             {
-                lock (SyncRoot)
+                lock (this.SyncRoot)
                 {
                     this.ClientMessages.Add("Cannot start server, try later...");
                 }
@@ -156,7 +151,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             }
 
             this.ServerSocket.Listen(10); // up to 10 client
-            lock (SyncRoot)
+            lock (this.SyncRoot)
             {
                 this.ClientMessages.Add("Start Listening...");
             }
@@ -215,7 +210,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                         socket.Send(Encoding.UTF8.GetBytes(sendMessage));
                     }
 
-                    lock (SyncRoot)
+                    lock (this.SyncRoot)
                     {
                         this.ClientMessages.Add(sendMessage);
                     }

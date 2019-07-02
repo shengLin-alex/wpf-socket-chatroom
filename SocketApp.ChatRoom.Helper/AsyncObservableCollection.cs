@@ -18,27 +18,27 @@ namespace SocketApp.ChatRoom.Helper
         {
         }
 
-        protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs args)
         {
             if (SynchronizationContext.Current == this.CurrentContext)
             {
-                this.RaiseCollectionChanged(e);
+                this.RaiseCollectionChanged(args);
             }
             else
             {
-                this.CurrentContext.Post(this.RaiseCollectionChanged, e);
+                this.CurrentContext.Post(this.RaiseCollectionChanged, args);
             }
         }
 
-        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+        protected override void OnPropertyChanged(PropertyChangedEventArgs args)
         {
             if (SynchronizationContext.Current == this.CurrentContext)
             {
-                this.RaisePropertyChanged(e);
+                this.RaisePropertyChanged(args);
             }
             else
             {
-                this.CurrentContext.Post(this.RaisePropertyChanged, e);
+                this.CurrentContext.Post(this.RaisePropertyChanged, args);
             }
         }
 

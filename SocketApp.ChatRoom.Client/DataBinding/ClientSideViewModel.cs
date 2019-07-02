@@ -1,6 +1,5 @@
 ﻿using SocketApp.ChatRoom.Helper;
 using System;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
@@ -18,15 +17,15 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         private const string IP = "127.0.0.1";
 
         private BindingDataModel BindingData;
-        private static readonly object SyncRoot = new object();
+
+        private object SyncRoot = new object();
 
         public ClientSideViewModel()
         {
             this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
             this.ReceivedMessages = new AsyncObservableCollection<string>();
-            BindingOperations.EnableCollectionSynchronization(this.ReceivedMessages, SyncRoot);
+            BindingOperations.EnableCollectionSynchronization(this.ReceivedMessages, this.SyncRoot);
         }
 
         public AsyncObservableCollection<string> ReceivedMessages { get; private set; }
@@ -146,7 +145,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             catch
             {
                 this.IsSendMessageButtonEnable = false;
-                lock (SyncRoot)
+                lock (this.SyncRoot)
                 {
                     this.ReceivedMessages.Add("Failed To Connect To Server. Retry Later...");
                 }
@@ -168,7 +167,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                     int receiveNumber = connection.Receive(buffer);
 
                     string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
-                    lock (SyncRoot)
+                    lock (this.SyncRoot)
                     {
                         this.ReceivedMessages.Add(receiveString);
                     }
@@ -195,12 +194,10 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 }
                 catch
                 {
-                    lock (SyncRoot)
+                    lock (this.SyncRoot)
                     {
                         this.ReceivedMessages.Add("Failed To Connect To Server...");
                     }
-                    this.ClientSocket.Shutdown(SocketShutdown.Both);
-                    this.ClientSocket.Close();
                 }
             })
             {
