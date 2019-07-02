@@ -1,10 +1,12 @@
 ﻿using SocketApp.ChatRoom.Helper;
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Client.DataBinding
@@ -16,12 +18,18 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         private const string IP = "127.0.0.1";
 
         private BindingDataModel BindingData;
+        private object SyncRoot = new object();
 
         public ClientSideViewModel()
         {
             this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            this.ReceivedMessages = new ObservableCollection<string>();
+            BindingOperations.EnableCollectionSynchronization(this.ReceivedMessages, this.SyncRoot);
         }
+
+        public ObservableCollection<string> ReceivedMessages { get; private set; }
 
         public void Dispose()
         {
@@ -39,19 +47,6 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             {
                 this.BindingData.MessageInput = value;
                 this.OnPropertyChanged(nameof(this.MessageInput));
-            }
-        }
-
-        public string MessageContent
-        {
-            get
-            {
-                return this.BindingData.MessageContent;
-            }
-            set
-            {
-                this.BindingData.MessageContent = value;
-                this.OnPropertyChanged(nameof(this.MessageContent));
             }
         }
 
@@ -133,7 +128,10 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             catch
             {
                 this.IsSendMessageButtonEnable = false;
-                this.MessageContent += "Failed To Connect To Server. Retry Later...\r\n";
+                lock (this.SyncRoot)
+                {
+                    this.ReceivedMessages.Add("Failed To Connect To Server. Retry Later...");
+                }
             }
         }
 
@@ -152,7 +150,10 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                     int receiveNumber = connection.Receive(buffer);
 
                     string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
-                    this.MessageContent += $"\r\n{receiveString}";
+                    lock (this.SyncRoot)
+                    {
+                        this.ReceivedMessages.Add(receiveString);
+                    }
                 }
                 catch
                 {
@@ -174,7 +175,10 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             }
             catch
             {
-                this.MessageContent = "Failed To Connect To Server.\r\n";
+                lock (this.SyncRoot)
+                {
+                    this.ReceivedMessages.Add("Failed To Connect To Server...");
+                }
                 this.ClientSocket.Shutdown(SocketShutdown.Both);
                 this.ClientSocket.Close();
             }

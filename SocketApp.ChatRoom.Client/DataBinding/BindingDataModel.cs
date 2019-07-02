@@ -3,7 +3,6 @@
     public class BindingDataModel
     {
         public string MessageInput { get; set; } = "";
-        public string MessageContent { get; set; } = "";
         public bool IsSendMessageButtonEnable { get; set; } = false;
         public bool IsConnectButtonEnable { get; set; } = true;
     }
