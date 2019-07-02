@@ -31,10 +31,28 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         public ObservableCollection<string> ReceivedMessages { get; private set; }
 
+        ~ClientSideViewModel()
+        {
+            // Finalizer calls Dispose(false)
+            this.Dispose(false);
+        }
+
+        /// <summary>
+        /// Dispose
+        /// </summary>
         public void Dispose()
         {
-            this.ClientSocket.Shutdown(SocketShutdown.Both);
-            this.ClientSocket.Close();
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.ClientSocket.Shutdown(SocketShutdown.Both);
+                this.ClientSocket.Close();
+            }
         }
 
         public string MessageInput
@@ -169,19 +187,27 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         {
             string text = this.MessageInput;
 
-            try
+            Thread sendMessageThread = new Thread(() =>
             {
-                this.ClientSocket.Send(Encoding.UTF8.GetBytes(text));
-            }
-            catch
-            {
-                lock (this.SyncRoot)
+                try
                 {
-                    this.ReceivedMessages.Add("Failed To Connect To Server...");
+                    this.ClientSocket.Send(Encoding.UTF8.GetBytes(text));
                 }
-                this.ClientSocket.Shutdown(SocketShutdown.Both);
-                this.ClientSocket.Close();
-            }
+                catch
+                {
+                    lock (this.SyncRoot)
+                    {
+                        this.ReceivedMessages.Add("Failed To Connect To Server...");
+                    }
+                    this.ClientSocket.Shutdown(SocketShutdown.Both);
+                    this.ClientSocket.Close();
+                }
+            })
+            {
+                IsBackground = true
+            };
+
+            sendMessageThread.Start();
         }
     }
 }

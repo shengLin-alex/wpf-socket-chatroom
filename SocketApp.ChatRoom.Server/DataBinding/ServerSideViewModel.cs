@@ -37,6 +37,8 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         /// </summary>
         private const string IP = "127.0.0.1";
 
+        private bool IsStartButtonEnableField = true;
+
         /// <summary>
         /// Sync Root for lock
         /// </summary>
@@ -59,6 +61,19 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         /// </summary>
         public ObservableCollection<string> ClientMessages { get; private set; }
 
+        public bool IsStartButtonEnable
+        {
+            get
+            {
+                return this.IsStartButtonEnableField;
+            }
+            set
+            {
+                this.IsStartButtonEnableField = value;
+                this.OnPropertyChanged(nameof(this.IsStartButtonEnable));
+            }
+        }
+
         /// <summary>
         /// Binding command for Start Listening
         /// </summary>
@@ -75,13 +90,28 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
+        ~ServerSideViewModel()
+        {
+            // Finalizer calls Dispose(false)
+            this.Dispose(false);
+        }
+
         /// <summary>
         /// Dispose
         /// </summary>
         public void Dispose()
         {
-            this.ServerSocket.Shutdown(SocketShutdown.Both);
-            this.ServerSocket.Close();
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.ServerSocket.Shutdown(SocketShutdown.Both);
+                this.ServerSocket.Close();
+            }
         }
 
         /// <summary>
@@ -113,12 +143,13 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             try
             {
                 this.ServerSocket.Bind(new IPEndPoint(ip, PORT)); // bind port 7000
+                this.IsStartButtonEnable = false;
             }
             catch
             {
                 lock (this.SyncRoot)
                 {
-                    this.ClientMessages.Add("Server is already listening...");
+                    this.ClientMessages.Add("Cannot start server, try later...");
                 }
 
                 return;
