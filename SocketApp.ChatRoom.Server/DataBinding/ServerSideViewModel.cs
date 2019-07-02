@@ -38,8 +38,6 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
         private bool IsStartButtonEnableField = true;
 
-        private object SyncRoot = new object();
-
         /// <summary>
         /// constructor
         /// </summary>
@@ -47,8 +45,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         {
             this.ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ClientSockets = new List<Socket>();
-            this.ClientMessages = new AsyncObservableCollection<string>();
-            BindingOperations.EnableCollectionSynchronization(this.ClientMessages, this.SyncRoot);
+            this.ClientMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
         }
 
         /// <summary>
@@ -142,19 +139,13 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             }
             catch
             {
-                lock (this.SyncRoot)
-                {
-                    this.ClientMessages.Add("Cannot start server, try later...");
-                }
+                this.ClientMessages.Add("Cannot start server, try later...");
 
                 return;
             }
 
             this.ServerSocket.Listen(10); // up to 10 client
-            lock (this.SyncRoot)
-            {
-                this.ClientMessages.Add("Start Listening...");
-            }
+            this.ClientMessages.Add("Start Listening...");
 
             Thread serverThread = new Thread(() =>
             {
@@ -210,10 +201,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                         socket.Send(Encoding.UTF8.GetBytes(sendMessage));
                     }
 
-                    lock (this.SyncRoot)
-                    {
-                        this.ClientMessages.Add(sendMessage);
-                    }
+                    this.ClientMessages.Add(sendMessage);
                 }
                 catch
                 {

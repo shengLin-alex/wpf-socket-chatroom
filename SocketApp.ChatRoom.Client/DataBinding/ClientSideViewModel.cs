@@ -18,14 +18,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         private BindingDataModel BindingData;
 
-        private object SyncRoot = new object();
-
         public ClientSideViewModel()
         {
             this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.ReceivedMessages = new AsyncObservableCollection<string>();
-            BindingOperations.EnableCollectionSynchronization(this.ReceivedMessages, this.SyncRoot);
+            this.ReceivedMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
         }
 
         public AsyncObservableCollection<string> ReceivedMessages { get; private set; }
@@ -145,10 +142,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             catch
             {
                 this.IsSendMessageButtonEnable = false;
-                lock (this.SyncRoot)
-                {
-                    this.ReceivedMessages.Add("Failed To Connect To Server. Retry Later...");
-                }
+                this.ReceivedMessages.Add("Failed To Connect To Server. Retry Later...");
             }
         }
 
@@ -167,10 +161,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                     int receiveNumber = connection.Receive(buffer);
 
                     string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
-                    lock (this.SyncRoot)
-                    {
-                        this.ReceivedMessages.Add(receiveString);
-                    }
+                    this.ReceivedMessages.Add(receiveString);
                 }
                 catch
                 {
@@ -194,10 +185,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 }
                 catch
                 {
-                    lock (this.SyncRoot)
-                    {
-                        this.ReceivedMessages.Add("Failed To Connect To Server...");
-                    }
+                    this.ReceivedMessages.Add("Failed To Connect To Server...");
                 }
             })
             {
