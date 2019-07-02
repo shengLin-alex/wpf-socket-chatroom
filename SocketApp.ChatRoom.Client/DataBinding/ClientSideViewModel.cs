@@ -18,7 +18,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         private const string IP = "127.0.0.1";
 
         private BindingDataModel BindingData;
-        private object SyncRoot = new object();
+        private static readonly object SyncRoot = new object();
 
         public ClientSideViewModel()
         {
@@ -26,7 +26,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             this.ReceivedMessages = new ObservableCollection<string>();
-            BindingOperations.EnableCollectionSynchronization(this.ReceivedMessages, this.SyncRoot);
+            BindingOperations.EnableCollectionSynchronization(this.ReceivedMessages, SyncRoot);
         }
 
         public ObservableCollection<string> ReceivedMessages { get; private set; }
@@ -146,7 +146,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             catch
             {
                 this.IsSendMessageButtonEnable = false;
-                lock (this.SyncRoot)
+                lock (SyncRoot)
                 {
                     this.ReceivedMessages.Add("Failed To Connect To Server. Retry Later...");
                 }
@@ -168,7 +168,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                     int receiveNumber = connection.Receive(buffer);
 
                     string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
-                    lock (this.SyncRoot)
+                    lock (SyncRoot)
                     {
                         this.ReceivedMessages.Add(receiveString);
                     }
@@ -195,7 +195,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 }
                 catch
                 {
-                    lock (this.SyncRoot)
+                    lock (SyncRoot)
                     {
                         this.ReceivedMessages.Add("Failed To Connect To Server...");
                     }

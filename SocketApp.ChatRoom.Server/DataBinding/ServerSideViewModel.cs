@@ -42,7 +42,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         /// <summary>
         /// Sync Root for lock
         /// </summary>
-        private object SyncRoot = new object();
+        private static readonly object SyncRoot = new object();
 
         /// <summary>
         /// constructor
@@ -53,7 +53,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             this.ClientSockets = new List<Socket>();
 
             this.ClientMessages = new ObservableCollection<string>();
-            BindingOperations.EnableCollectionSynchronization(this.ClientMessages, this.SyncRoot);
+            BindingOperations.EnableCollectionSynchronization(this.ClientMessages, SyncRoot);
         }
 
         /// <summary>
@@ -147,7 +147,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             }
             catch
             {
-                lock (this.SyncRoot)
+                lock (SyncRoot)
                 {
                     this.ClientMessages.Add("Cannot start server, try later...");
                 }
@@ -156,7 +156,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             }
 
             this.ServerSocket.Listen(10); // up to 10 client
-            lock (this.SyncRoot)
+            lock (SyncRoot)
             {
                 this.ClientMessages.Add("Start Listening...");
             }
@@ -215,7 +215,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                         socket.Send(Encoding.UTF8.GetBytes(sendMessage));
                     }
 
-                    lock (this.SyncRoot)
+                    lock (SyncRoot)
                     {
                         this.ClientMessages.Add(sendMessage);
                     }
