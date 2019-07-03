@@ -153,9 +153,9 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 {
                     this.ClientSocket.Send(Encoding.UTF8.GetBytes(text));
                 }
-                catch
+                catch (Exception e)
                 {
-                    this.ReceivedMessages.Add("Failed To Connect To Server...");
+                    this.ReceivedMessages.Add(e.Message);
                 }
             })
             {

@@ -143,9 +143,9 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                 this.ServerSocket.Bind(new IPEndPoint(ip, PORT)); // bind port 7000
                 this.IsStartButtonEnable = false;
             }
-            catch
+            catch (Exception e)
             {
-                this.ClientMessages.Add("Cannot start server, try later...");
+                this.ClientMessages.Add(e.Message);
 
                 return;
             }
