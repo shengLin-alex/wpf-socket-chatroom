@@ -6,15 +6,24 @@ namespace SocketApp.ChatRoom.Server
     /// <summary>
     /// MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, IMainWindow
     {
         /// <summary>
         /// constructor
         /// </summary>
-        public MainWindow()
+        public MainWindow(IServerSideViewModel viewModel)
         {
             this.InitializeComponent();
-            this.DataContext = new ServerSideViewModel();
+            this.DataContext = viewModel;
+        }
+
+        public MainWindow()
+        {
+        }
+
+        bool? IMainWindow.ShowDialog()
+        {
+            return base.ShowDialog();
         }
     }
 }

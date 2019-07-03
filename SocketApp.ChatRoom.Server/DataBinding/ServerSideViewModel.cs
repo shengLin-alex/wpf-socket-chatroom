@@ -13,7 +13,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
     /// <summary>
     /// Server Side ViewModel
     /// </summary>
-    public class ServerSideViewModel : INotifyPropertyChanged, IDisposable
+    public class ServerSideViewModel : IServerSideViewModel, INotifyPropertyChanged, IDisposable
     {
         /// <summary>
         /// The server socket
@@ -100,7 +100,6 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         {
             if (disposing)
             {
-                this.ServerSocket.Shutdown(SocketShutdown.Both);
                 this.ServerSocket.Close();
             }
         }
