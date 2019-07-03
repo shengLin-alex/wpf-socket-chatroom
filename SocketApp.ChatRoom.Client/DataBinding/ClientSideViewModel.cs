@@ -11,17 +11,20 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 {
     public class ClientSideViewModel : IClientSideViewModel, INotifyPropertyChanged, IDisposable
     {
+        private readonly ClientThreadHandler Handler;
+
         private readonly Socket ClientSocket;
         private const int PORT = 7000;
         private const string IP = "127.0.0.1";
 
-        private BindingDataModel BindingData;
+        private readonly BindingDataModel BindingData;
 
         public ClientSideViewModel()
         {
             this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ReceivedMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
+            this.Handler = new ClientThreadHandler(this);
         }
 
         public AsyncObservableCollection<string> ReceivedMessages { get; private set; }
@@ -45,7 +48,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         {
             if (disposing)
             {
-                this.ClientSocket.Close();
+                this.Handler.RequireStop();
             }
         }
 
@@ -127,47 +130,20 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             try
             {
                 this.ClientSocket.Connect(new IPEndPoint(ip, PORT));
-
-                Thread receiveThread = new Thread(this.ReceiveMessage)
+                this.Handler.RequireStart();
+                Thread receiveThread = new Thread(() => this.Handler.ReceiveMessage(this.ClientSocket))
                 {
                     IsBackground = true // make thread background, for avoiding process not really shutdown.
                 };
-                receiveThread.Start(this.ClientSocket);
+                receiveThread.Start();
 
                 this.IsSendMessageButtonEnable = true;
                 this.IsConnectButtonEnable = false;
             }
-            catch
+            catch (Exception e)
             {
                 this.IsSendMessageButtonEnable = false;
-                this.ReceivedMessages.Add("Failed To Connect To Server. Retry Later...");
-            }
-        }
-
-        private void ReceiveMessage(object clientSocket)
-        {
-            if (!(clientSocket is Socket connection))
-            {
-                return;
-            }
-
-            while (true)
-            {
-                try
-                {
-                    byte[] buffer = new byte[1024];
-                    int receiveNumber = connection.Receive(buffer);
-
-                    string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
-                    this.ReceivedMessages.Add(receiveString);
-                }
-                catch
-                {
-                    connection.Shutdown(SocketShutdown.Both);
-                    connection.Close();
-
-                    break;
-                }
+                this.ReceivedMessages.Add(e.Message);
             }
         }
 
@@ -191,6 +167,53 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             };
 
             sendMessageThread.Start();
+        }
+
+        private class ClientThreadHandler
+        {
+            private readonly ClientSideViewModel Outer;
+
+            private volatile bool IsActive;
+
+            public ClientThreadHandler(ClientSideViewModel outer)
+            {
+                this.Outer = outer;
+            }
+
+            public void RequireStart()
+            {
+                this.IsActive = true;
+            }
+
+            public void RequireStop()
+            {
+                this.IsActive = false;
+            }
+
+            public void ReceiveMessage(Socket connection)
+            {
+                try
+                {
+                    while (this.IsActive)
+                    {
+                        byte[] buffer = new byte[1024];
+                        int receiveNumber = connection.Receive(buffer);
+
+                        string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
+                        this.Outer.ReceivedMessages.Add(receiveString);
+                    }
+                }
+                catch (Exception e)
+                {
+                    this.Outer.ReceivedMessages.Add(e.Message);
+                }
+                finally
+                {
+                    this.Outer.ClientSocket.Close();
+                    this.Outer.IsSendMessageButtonEnable = false;
+                    this.Outer.IsConnectButtonEnable = false;
+                }
+            }
         }
     }
 }

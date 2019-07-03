@@ -19,7 +19,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         private Thread ServerThread;
-        private readonly ReceiveMessageHandler Handler;
+        private readonly ServerThreadHandler Handler;
         private volatile bool IsServerThreadActive;
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             this.ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ClientSockets = new List<Socket>();
             this.ClientMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
-            this.Handler = new ReceiveMessageHandler(this);
+            this.Handler = new ServerThreadHandler(this);
         }
 
         /// <summary>
@@ -182,13 +182,13 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             this.ServerThread.Start();
         }
 
-        private class ReceiveMessageHandler
+        private class ServerThreadHandler
         {
             private readonly ServerSideViewModel Outer;
 
             private volatile bool IsActive;
 
-            public ReceiveMessageHandler(ServerSideViewModel outer)
+            public ServerThreadHandler(ServerSideViewModel outer)
             {
                 this.Outer = outer;
                 this.IsActive = false;
