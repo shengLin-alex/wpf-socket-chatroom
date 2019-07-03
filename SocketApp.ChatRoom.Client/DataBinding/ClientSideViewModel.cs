@@ -1,4 +1,5 @@
-﻿using SocketApp.ChatRoom.Helper;
+﻿using Microsoft.Extensions.Logging;
+using SocketApp.ChatRoom.Helper;
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -9,19 +10,30 @@ using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Client.DataBinding
 {
-    public class ClientSideViewModel : INotifyPropertyChanged, IDisposable
+    public class ClientSideViewModel : IClientSideViewModel, INotifyPropertyChanged, IDisposable
     {
+        // logger
+        private readonly ILogger<ClientSideViewModel> Logger;
+
+        // thread
+        private readonly ClientThreadHandler Handler;
+        private readonly object SyncRoot = new object();
+
+        // socket setting
         private readonly Socket ClientSocket;
         private const int PORT = 7000;
         private const string IP = "127.0.0.1";
 
-        private BindingDataModel BindingData;
+        // data model
+        private readonly BindingDataModel BindingData;
 
-        public ClientSideViewModel()
+        public ClientSideViewModel(ILogger<ClientSideViewModel> logger)
         {
+            this.Logger = logger;
             this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ReceivedMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
+            this.Handler = new ClientThreadHandler(this);
         }
 
         public AsyncObservableCollection<string> ReceivedMessages { get; private set; }
@@ -43,10 +55,13 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            lock (this.SyncRoot)
             {
-                this.ClientSocket.Shutdown(SocketShutdown.Both);
-                this.ClientSocket.Close();
+                if (disposing)
+                {
+                    this.Handler?.RequireStop();
+                    this.ClientSocket?.Close();
+                }
             }
         }
 
@@ -65,10 +80,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         public bool IsSendMessageButtonEnable
         {
-            get
-            {
-                return this.BindingData.IsSendMessageButtonEnable;
-            }
+            get => this.BindingData.IsSendMessageButtonEnable;
             set
             {
                 this.BindingData.IsSendMessageButtonEnable = value;
@@ -78,10 +90,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         public bool IsConnectButtonEnable
         {
-            get
-            {
-                return this.BindingData.IsConnectButtonEnable;
-            }
+            get => this.BindingData.IsConnectButtonEnable;
             set
             {
                 this.BindingData.IsConnectButtonEnable = value;
@@ -89,31 +98,19 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             }
         }
 
-        public ICommand TryConnectToServer
-        {
-            get
-            {
-                return new RelayCommand(this.ConnectToServer, this.CanUpdateControlExecute);
-            }
-        }
+        public ICommand TryConnectToServer => new RelayCommand(this.ConnectToServer, this.CanUpdateControlExecute);
 
-        public ICommand TrySendMessage
-        {
-            get
-            {
-                return new RelayCommand(this.SendMessage, this.CanUpdateControlExecute);
-            }
-        }
+        public ICommand TrySendMessage => new RelayCommand(this.SendMessage, this.CanUpdateControlExecute);
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged(string name)
         {
             // thread-safe call PropertyChanged
-            App.Current.Dispatcher.Invoke(new Action(() =>
+            App.Current.Dispatcher.Invoke(() =>
             {
                 this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-            }));
+            });
         }
 
         private bool CanUpdateControlExecute()
@@ -128,47 +125,21 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             try
             {
                 this.ClientSocket.Connect(new IPEndPoint(ip, PORT));
-
-                Thread receiveThread = new Thread(this.ReceiveMessage)
+                this.Handler.RequireStart();
+                Thread receiveThread = new Thread(() => this.Handler.ReceiveMessage(this.ClientSocket))
                 {
                     IsBackground = true // make thread background, for avoiding process not really shutdown.
                 };
-                receiveThread.Start(this.ClientSocket);
+                receiveThread.Start();
 
                 this.IsSendMessageButtonEnable = true;
                 this.IsConnectButtonEnable = false;
+                this.Logger.LogInformation("Server Start");
             }
-            catch
+            catch (Exception e)
             {
                 this.IsSendMessageButtonEnable = false;
-                this.ReceivedMessages.Add("Failed To Connect To Server. Retry Later...");
-            }
-        }
-
-        private void ReceiveMessage(object clientSocket)
-        {
-            if (!(clientSocket is Socket connection))
-            {
-                return;
-            }
-
-            while (true)
-            {
-                try
-                {
-                    byte[] buffer = new byte[1024];
-                    int receiveNumber = connection.Receive(buffer);
-
-                    string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
-                    this.ReceivedMessages.Add(receiveString);
-                }
-                catch
-                {
-                    connection.Shutdown(SocketShutdown.Both);
-                    connection.Close();
-
-                    break;
-                }
+                this.ReceivedMessages.Add(e.Message);
             }
         }
 
@@ -182,9 +153,9 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 {
                     this.ClientSocket.Send(Encoding.UTF8.GetBytes(text));
                 }
-                catch
+                catch (Exception e)
                 {
-                    this.ReceivedMessages.Add("Failed To Connect To Server...");
+                    this.ReceivedMessages.Add(e.Message);
                 }
             })
             {
@@ -192,6 +163,49 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             };
 
             sendMessageThread.Start();
+        }
+
+        private class ClientThreadHandler
+        {
+            private readonly ClientSideViewModel Outer;
+
+            private volatile bool IsActive;
+
+            public ClientThreadHandler(ClientSideViewModel outer)
+            {
+                this.Outer = outer;
+            }
+
+            public void RequireStart()
+            {
+                this.IsActive = true;
+            }
+
+            public void RequireStop()
+            {
+                this.IsActive = false;
+            }
+
+            public void ReceiveMessage(Socket connection)
+            {
+                try
+                {
+                    while (this.IsActive)
+                    {
+                        byte[] buffer = new byte[1024];
+                        int receiveNumber = connection.Receive(buffer);
+
+                        string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
+                        this.Outer.ReceivedMessages.Add(receiveString);
+                    }
+                }
+                catch (Exception e)
+                {
+                    this.Outer.ReceivedMessages.Add(e.Message);
+                    this.Outer.IsSendMessageButtonEnable = false;
+                    this.Outer.IsConnectButtonEnable = false;
+                }
+            }
         }
     }
 }

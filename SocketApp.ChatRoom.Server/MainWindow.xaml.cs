@@ -1,20 +1,28 @@
 ﻿using SocketApp.ChatRoom.Server.DataBinding;
-using System.Windows;
 
 namespace SocketApp.ChatRoom.Server
 {
     /// <summary>
     /// MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : IMainWindow
     {
         /// <summary>
         /// constructor
         /// </summary>
-        public MainWindow()
+        public MainWindow(IServerSideViewModel viewModel)
         {
             this.InitializeComponent();
-            this.DataContext = new ServerSideViewModel();
+            this.DataContext = viewModel;
+        }
+
+        public MainWindow()
+        {
+        }
+
+        bool? IMainWindow.ShowDialog()
+        {
+            return base.ShowDialog();
         }
     }
 }
