@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Microsoft.Extensions.Logging;
 using SocketApp.ChatRoom.Client.DataBinding;
 
 namespace SocketApp.ChatRoom.Client.IOC
@@ -15,6 +16,14 @@ namespace SocketApp.ChatRoom.Client.IOC
             builder.RegisterType<ClientSideViewModel>()
                   .As<IClientSideViewModel>()
                   .InstancePerLifetimeScope();
+
+            builder.RegisterType<LoggerFactory>()
+                   .As<ILoggerFactory>()
+                   .SingleInstance();
+
+            builder.RegisterGeneric(typeof(Logger<>))
+                   .As(typeof(ILogger<>))
+                   .SingleInstance();
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using SocketApp.ChatRoom.Helper;
+﻿using Microsoft.Extensions.Logging;
+using SocketApp.ChatRoom.Helper;
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -11,6 +12,8 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 {
     public class ClientSideViewModel : IClientSideViewModel, INotifyPropertyChanged, IDisposable
     {
+        private readonly ILogger<ClientSideViewModel> Logger;
+
         private readonly ClientThreadHandler Handler;
 
         private readonly Socket ClientSocket;
@@ -19,8 +22,9 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         private readonly BindingDataModel BindingData;
 
-        public ClientSideViewModel()
+        public ClientSideViewModel(ILogger<ClientSideViewModel> logger)
         {
+            this.Logger = logger;
             this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ReceivedMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
@@ -121,6 +125,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
                 this.IsSendMessageButtonEnable = true;
                 this.IsConnectButtonEnable = false;
+                this.Logger.LogInformation("Server Start");
             }
             catch (Exception e)
             {

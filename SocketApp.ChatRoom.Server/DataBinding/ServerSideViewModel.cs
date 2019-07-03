@@ -1,4 +1,4 @@
-﻿using NLog;
+﻿using Microsoft.Extensions.Logging;
 using SocketApp.ChatRoom.Helper;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
     /// </summary>
     public class ServerSideViewModel : IServerSideViewModel, INotifyPropertyChanged, IDisposable
     {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private readonly ILogger<ServerSideViewModel> Logger;
 
         private Thread ServerThread;
         private readonly ServerThreadHandler Handler;
@@ -47,8 +47,9 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         /// <summary>
         /// constructor
         /// </summary>
-        public ServerSideViewModel()
+        public ServerSideViewModel(ILogger<ServerSideViewModel> logger)
         {
+            this.Logger = logger;
             this.ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ClientSockets = new List<Socket>();
             this.ClientMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
@@ -144,7 +145,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
             this.ServerSocket.Listen(20); // up to 10 client
             this.ClientMessages.Add("Start Listening...");
-            Logger.Info("Server Start");
+            this.Logger.LogInformation("Server Start");
 
             this.Handler.RequireStart();
             this.ServerThread = new Thread(() =>

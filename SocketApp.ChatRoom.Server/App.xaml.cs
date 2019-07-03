@@ -1,4 +1,6 @@
 ﻿using Autofac;
+using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
 using SocketApp.ChatRoom.Server.IOC;
 using System.Windows;
 
@@ -17,6 +19,13 @@ namespace SocketApp.ChatRoom.Server
 
             using (ILifetimeScope lifeTimeScope = container.BeginLifetimeScope())
             {
+                ILoggerFactory loggerFactory = lifeTimeScope.Resolve<ILoggerFactory>();
+                loggerFactory.AddNLog(new NLogProviderOptions
+                {
+                    CaptureMessageTemplates = true,
+                    CaptureMessageProperties = true
+                });
+
                 IMainWindow mainWindow = lifeTimeScope.Resolve<IMainWindow>();
                 mainWindow.ShowDialog();
             }
