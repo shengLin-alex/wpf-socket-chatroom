@@ -9,7 +9,7 @@ using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Client.DataBinding
 {
-    public class ClientSideViewModel : INotifyPropertyChanged, IDisposable
+    public class ClientSideViewModel : IClientSideViewModel, INotifyPropertyChanged, IDisposable
     {
         private readonly Socket ClientSocket;
         private const int PORT = 7000;
@@ -45,7 +45,6 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         {
             if (disposing)
             {
-                this.ClientSocket.Shutdown(SocketShutdown.Both);
                 this.ClientSocket.Close();
             }
         }

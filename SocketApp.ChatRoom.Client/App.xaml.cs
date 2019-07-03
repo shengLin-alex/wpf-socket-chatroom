@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Autofac;
+using SocketApp.ChatRoom.Client.IOC;
 using System.Windows;
 
 namespace SocketApp.ChatRoom.Client
@@ -13,5 +9,17 @@ namespace SocketApp.ChatRoom.Client
     /// </summary>
     public partial class App : Application
     {
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            ContainerBuilder builder = new ContainerBuilder();
+            AutofacBootstrapper.RegisterType(builder);
+            IContainer container = builder.Build();
+
+            using (ILifetimeScope lifeTimeScope = container.BeginLifetimeScope())
+            {
+                IMainWindow mainWindow = lifeTimeScope.Resolve<IMainWindow>();
+                mainWindow.ShowDialog();
+            }
+        }
     }
 }

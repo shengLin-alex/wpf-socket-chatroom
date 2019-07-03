@@ -68,6 +68,9 @@
     </Compile>
     <Compile Include="DataBinding\ClientSideViewModel.cs" />
     <Compile Include="DataBinding\BindingDataModel.cs" />
+    <Compile Include="DataBinding\IClientSideViewModel.cs" />
+    <Compile Include="IMainWindow.cs" />
+    <Compile Include="IOC\AutofacBootstrapper.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
