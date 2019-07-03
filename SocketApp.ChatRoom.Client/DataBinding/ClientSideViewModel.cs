@@ -67,10 +67,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         public bool IsSendMessageButtonEnable
         {
-            get
-            {
-                return this.BindingData.IsSendMessageButtonEnable;
-            }
+            get => this.BindingData.IsSendMessageButtonEnable;
             set
             {
                 this.BindingData.IsSendMessageButtonEnable = value;
@@ -80,10 +77,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         public bool IsConnectButtonEnable
         {
-            get
-            {
-                return this.BindingData.IsConnectButtonEnable;
-            }
+            get => this.BindingData.IsConnectButtonEnable;
             set
             {
                 this.BindingData.IsConnectButtonEnable = value;
@@ -91,31 +85,19 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             }
         }
 
-        public ICommand TryConnectToServer
-        {
-            get
-            {
-                return new RelayCommand(this.ConnectToServer, this.CanUpdateControlExecute);
-            }
-        }
+        public ICommand TryConnectToServer => new RelayCommand(this.ConnectToServer, this.CanUpdateControlExecute);
 
-        public ICommand TrySendMessage
-        {
-            get
-            {
-                return new RelayCommand(this.SendMessage, this.CanUpdateControlExecute);
-            }
-        }
+        public ICommand TrySendMessage => new RelayCommand(this.SendMessage, this.CanUpdateControlExecute);
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged(string name)
         {
             // thread-safe call PropertyChanged
-            App.Current.Dispatcher.Invoke(new Action(() =>
+            App.Current.Dispatcher.Invoke(() =>
             {
                 this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-            }));
+            });
         }
 
         private bool CanUpdateControlExecute()

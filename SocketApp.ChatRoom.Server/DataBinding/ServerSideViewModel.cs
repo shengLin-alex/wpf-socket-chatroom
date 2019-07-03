@@ -58,14 +58,11 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         /// <summary>
         /// Client Messages that send to server.
         /// </summary>
-        public AsyncObservableCollection<string> ClientMessages { get; private set; }
+        public AsyncObservableCollection<string> ClientMessages { get; }
 
         public bool IsStartButtonEnable
         {
-            get
-            {
-                return this.IsStartButtonEnableField;
-            }
+            get => this.IsStartButtonEnableField;
             set
             {
                 this.IsStartButtonEnableField = value;
@@ -114,10 +111,10 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         private void OnPropertyChanged(string name)
         {
             // thread-safe call PropertyChanged
-            App.Current.Dispatcher.Invoke(new Action(() =>
+            App.Current.Dispatcher.Invoke(() =>
             {
                 this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-            }));
+            });
         }
 
         private bool CanUpdateControlExecute()
@@ -160,8 +157,11 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                         if (this.ServerSocket.IsAvialable())
                         {
                             Socket client = this.ServerSocket.Accept();
-                            IPEndPoint endPoint = client.RemoteEndPoint as IPEndPoint;
-                            this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} connected.");
+                            if (client.RemoteEndPoint is IPEndPoint endPoint)
+                            {
+                                this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} connected.");
+                            }
+
                             this.ClientSockets.Add(client);
                             Thread receiveThread = new Thread(this.Handler.ReceiveMessage)
                             {
@@ -253,8 +253,10 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                     {
                         if (e.Message == "遠端主機已強制關閉一個現存的連線。")
                         {
-                            IPEndPoint endPoint = this.Outer.ClientSockets.Find((s) => !s.IsAvialable()).RemoteEndPoint as IPEndPoint;
-                            this.Outer.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} closed");
+                            if (this.Outer.ClientSockets.Find((s) => !s.IsAvialable()).RemoteEndPoint is IPEndPoint endPoint)
+                            {
+                                this.Outer.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} closed");
+                            }
                         }
                         else
                         {

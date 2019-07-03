@@ -5,14 +5,14 @@ namespace SocketApp.ChatRoom.Server.IOC
 {
     public static class AutofacBootstrapper
     {
-        public static void RegisterType(ContainerBuilder bulder)
+        public static void RegisterType(ContainerBuilder builder)
         {
-            bulder.RegisterType<MainWindow>()
+            builder.RegisterType<MainWindow>()
                   .As<IMainWindow>()
                   .UsingConstructor(typeof(IServerSideViewModel))
                   .InstancePerLifetimeScope();
 
-            bulder.RegisterType<ServerSideViewModel>()
+            builder.RegisterType<ServerSideViewModel>()
                   .As<IServerSideViewModel>()
                   .InstancePerLifetimeScope();
         }
