@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Windows.Data;
 using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Server.DataBinding
@@ -144,7 +143,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                 return;
             }
 
-            this.ServerSocket.Listen(10); // up to 10 client
+            this.ServerSocket.Listen(20); // up to 10 client
             this.ClientMessages.Add("Start Listening...");
 
             Thread serverThread = new Thread(() =>
@@ -153,6 +152,8 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                 while (true)
                 {
                     Socket client = this.ServerSocket.Accept();
+                    IPEndPoint endPoint = client.RemoteEndPoint as IPEndPoint;
+                    this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} connected.");
                     this.ClientSockets.Add(client);
 
                     Thread receiveThread = new Thread(this.ReceiveMessage)
@@ -181,6 +182,9 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
             while (true)
             {
+                // remove not available client socket.
+                this.ClientSockets.RemoveAll((s) => !s.IsConnected());
+
                 try
                 {
                     byte[] buffer = new byte[1024]; // buffer
@@ -198,15 +202,27 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                     string sendMessage = $"{clientIp} : {clientPort} ---> {receiveString}";
                     foreach (Socket socket in this.ClientSockets) // send message to all client.
                     {
+                        if (!socket.IsConnected()) // skip not available socket.
+                        {
+                            continue;
+                        }
+
                         socket.Send(Encoding.UTF8.GetBytes(sendMessage));
                     }
 
                     this.ClientMessages.Add(sendMessage);
                 }
-                catch
+                catch (Exception e)
                 {
-                    connection.Shutdown(SocketShutdown.Both);
-                    connection.Close();
+                    if (e.Message == "遠端主機已強制關閉一個現存的連線。")
+                    {
+                        IPEndPoint endPoint = this.ClientSockets.Find((s) => !s.IsConnected()).RemoteEndPoint as IPEndPoint;
+                        this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} closed");
+                    }
+                    else
+                    {
+                        this.ClientMessages.Add(e.Message);
+                    }
 
                     break;
                 }
