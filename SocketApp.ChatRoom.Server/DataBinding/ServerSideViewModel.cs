@@ -16,11 +16,14 @@ namespace SocketApp.ChatRoom.Server.DataBinding
     /// </summary>
     public class ServerSideViewModel : IServerSideViewModel, INotifyPropertyChanged, IDisposable
     {
+        // logger
         private readonly ILogger<ServerSideViewModel> Logger;
 
+        // thread
         private Thread ServerThread;
         private readonly ServerThreadHandler Handler;
         private volatile bool IsServerThreadActive;
+        private readonly object SyncRoot = new object();
 
         /// <summary>
         /// The server socket
@@ -98,10 +101,14 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            lock (this.SyncRoot)
             {
-                this.Handler.RequireStop(); // set thread volatile flag false
-                this.ServerThread.Interrupt();
+                if (disposing)
+                {
+                    this.Handler?.RequireStop(); // set thread volatile flag false
+                    this.ServerThread?.Interrupt();
+                    this.ServerSocket?.Close();
+                }
             }
         }
 
@@ -164,17 +171,17 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                             }
 
                             this.ClientSockets.Add(client);
-                            Thread receiveThread = new Thread(this.Handler.ReceiveMessage)
+                            Thread receiveThread = new Thread(() => this.Handler.ReceiveMessage(client))
                             {
                                 IsBackground = true // make thread background, for avoiding process not really shutdown.
                             };
-                            receiveThread.Start(client);
+                            receiveThread.Start();
                         }
                     }
                 }
-                finally
+                catch (Exception e)
                 {
-                    this.ServerSocket.Close();
+                    this.ClientMessages.Add(e.Message);
                 }
             })
             {
@@ -211,19 +218,14 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             /// Receive client message
             /// </summary>
             /// <param name="clientSocket">client socket</param>
-            public void ReceiveMessage(object clientSocket)
+            public void ReceiveMessage(Socket connection)
             {
-                if (!(clientSocket is Socket connection))
-                {
-                    return;
-                }
-
-                while (this.IsActive)
+                try
                 {
                     // remove not available client socket.
                     this.Outer.ClientSockets.RemoveAll((s) => !s.IsAvialable());
 
-                    try
+                    while (this.IsActive)
                     {
                         byte[] buffer = new byte[1024]; // buffer
                         int receiveNumber = connection.Receive(buffer);
@@ -250,21 +252,19 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
                         this.Outer.ClientMessages.Add(sendMessage);
                     }
-                    catch (Exception e)
+                }
+                catch (Exception e)
+                {
+                    if (e.Message == "遠端主機已強制關閉一個現存的連線。")
                     {
-                        if (e.Message == "遠端主機已強制關閉一個現存的連線。")
+                        if (this.Outer.ClientSockets.Find((s) => !s.IsAvialable()).RemoteEndPoint is IPEndPoint endPoint)
                         {
-                            if (this.Outer.ClientSockets.Find((s) => !s.IsAvialable()).RemoteEndPoint is IPEndPoint endPoint)
-                            {
-                                this.Outer.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} closed");
-                            }
+                            this.Outer.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} closed");
                         }
-                        else
-                        {
-                            this.Outer.ClientMessages.Add(e.Message);
-                        }
-
-                        break;
+                    }
+                    else
+                    {
+                        this.Outer.ClientMessages.Add(e.Message);
                     }
                 }
             }

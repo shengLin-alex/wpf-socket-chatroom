@@ -12,14 +12,19 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 {
     public class ClientSideViewModel : IClientSideViewModel, INotifyPropertyChanged, IDisposable
     {
+        // logger
         private readonly ILogger<ClientSideViewModel> Logger;
 
+        // thread
         private readonly ClientThreadHandler Handler;
+        private readonly object SyncRoot = new object();
 
+        // socket setting
         private readonly Socket ClientSocket;
         private const int PORT = 7000;
         private const string IP = "127.0.0.1";
 
+        // data model
         private readonly BindingDataModel BindingData;
 
         public ClientSideViewModel(ILogger<ClientSideViewModel> logger)
@@ -50,9 +55,13 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            lock (this.SyncRoot)
             {
-                this.Handler.RequireStop();
+                if (disposing)
+                {
+                    this.Handler?.RequireStop();
+                    this.ClientSocket?.Close();
+                }
             }
         }
 
@@ -193,10 +202,6 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 catch (Exception e)
                 {
                     this.Outer.ReceivedMessages.Add(e.Message);
-                }
-                finally
-                {
-                    this.Outer.ClientSocket.Close();
                     this.Outer.IsSendMessageButtonEnable = false;
                     this.Outer.IsConnectButtonEnable = false;
                 }
