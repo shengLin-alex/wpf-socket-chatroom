@@ -16,11 +16,11 @@ namespace SocketApp.ChatRoom.Server.DataBinding
     /// </summary>
     public class ServerSideViewModel : IServerSideViewModel, INotifyPropertyChanged, IDisposable
     {
-        private static Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         private Thread ServerThread;
         private readonly ReceiveMessageHandler Handler;
-        private volatile bool IsServerThreadActive = false;
+        private volatile bool IsServerThreadActive;
 
         /// <summary>
         /// The server socket
@@ -76,13 +76,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         /// <summary>
         /// Binding command for Start Listening
         /// </summary>
-        public ICommand StartListening
-        {
-            get
-            {
-                return new RelayCommand(this.StartServer, this.CanUpdateControlExecute);
-            }
-        }
+        public ICommand StartListening => new RelayCommand(this.StartServer, this.CanUpdateControlExecute);
 
         /// <summary>
         /// Property Changed event handler
@@ -108,7 +102,8 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         {
             if (disposing)
             {
-                this.Handler.RequireStop();
+                this.Handler.RequireStop(); // set thread volatile flag false
+                this.ServerThread.Interrupt();
             }
         }
 
@@ -157,25 +152,29 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             this.Handler.RequireStart();
             this.ServerThread = new Thread(() =>
             {
-                // server socket listen loop.
-                while (this.IsServerThreadActive)
+                try
                 {
-                    if (this.ServerSocket.IsAvialable())
+                    // server socket listen loop.
+                    while (this.IsServerThreadActive)
                     {
-                        Socket client = this.ServerSocket.Accept();
-                        IPEndPoint endPoint = client.RemoteEndPoint as IPEndPoint;
-                        this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} connected.");
-                        this.ClientSockets.Add(client);
-                        Thread receiveThread = new Thread(this.Handler.ReceiveMessage)
+                        if (this.ServerSocket.IsAvialable())
                         {
-                            IsBackground = true // make thread background, for avoiding process not really shutdown.
-                        };
-                        receiveThread.Start(client);
+                            Socket client = this.ServerSocket.Accept();
+                            IPEndPoint endPoint = client.RemoteEndPoint as IPEndPoint;
+                            this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} connected.");
+                            this.ClientSockets.Add(client);
+                            Thread receiveThread = new Thread(this.Handler.ReceiveMessage)
+                            {
+                                IsBackground = true // make thread background, for avoiding process not really shutdown.
+                            };
+                            receiveThread.Start(client);
+                        }
                     }
                 }
-
-                this.ServerSocket.Close();
-                Logger.Info("Server stopped");
+                finally
+                {
+                    this.ServerSocket.Close();
+                }
             })
             {
                 IsBackground = true // make thread background, for avoiding process not really shutdown.
