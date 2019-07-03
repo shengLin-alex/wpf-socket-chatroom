@@ -1,4 +1,5 @@
-﻿using SocketApp.ChatRoom.Helper;
+﻿using NLog;
+using SocketApp.ChatRoom.Helper;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,6 +16,12 @@ namespace SocketApp.ChatRoom.Server.DataBinding
     /// </summary>
     public class ServerSideViewModel : IServerSideViewModel, INotifyPropertyChanged, IDisposable
     {
+        private static Logger Logger = LogManager.GetCurrentClassLogger();
+
+        private Thread ServerThread;
+        private readonly ReceiveMessageHandler Handler;
+        private volatile bool IsServerThreadActive = false;
+
         /// <summary>
         /// The server socket
         /// </summary>
@@ -45,6 +52,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             this.ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.ClientSockets = new List<Socket>();
             this.ClientMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
+            this.Handler = new ReceiveMessageHandler(this);
         }
 
         /// <summary>
@@ -100,7 +108,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         {
             if (disposing)
             {
-                this.ServerSocket.Close();
+                this.Handler.RequireStop();
             }
         }
 
@@ -144,86 +152,118 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
             this.ServerSocket.Listen(20); // up to 10 client
             this.ClientMessages.Add("Start Listening...");
+            Logger.Info("Server Start");
 
-            Thread serverThread = new Thread(() =>
+            this.Handler.RequireStart();
+            this.ServerThread = new Thread(() =>
             {
                 // server socket listen loop.
-                while (true)
+                while (this.IsServerThreadActive)
                 {
-                    Socket client = this.ServerSocket.Accept();
-                    IPEndPoint endPoint = client.RemoteEndPoint as IPEndPoint;
-                    this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} connected.");
-                    this.ClientSockets.Add(client);
-
-                    Thread receiveThread = new Thread(this.ReceiveMessage)
+                    if (this.ServerSocket.IsAvialable())
                     {
-                        IsBackground = true // make thread background, for avoiding process not really shutdown.
-                    };
-                    receiveThread.Start(client);
+                        Socket client = this.ServerSocket.Accept();
+                        IPEndPoint endPoint = client.RemoteEndPoint as IPEndPoint;
+                        this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} connected.");
+                        this.ClientSockets.Add(client);
+                        Thread receiveThread = new Thread(this.Handler.ReceiveMessage)
+                        {
+                            IsBackground = true // make thread background, for avoiding process not really shutdown.
+                        };
+                        receiveThread.Start(client);
+                    }
                 }
+
+                this.ServerSocket.Close();
+                Logger.Info("Server stopped");
             })
             {
                 IsBackground = true // make thread background, for avoiding process not really shutdown.
             };
-            serverThread.Start();
+            this.ServerThread.Start();
         }
 
-        /// <summary>
-        /// Receive client message
-        /// </summary>
-        /// <param name="clientSocket">client socket</param>
-        private void ReceiveMessage(object clientSocket)
+        private class ReceiveMessageHandler
         {
-            if (!(clientSocket is Socket connection))
+            private readonly ServerSideViewModel Outer;
+
+            private volatile bool IsActive;
+
+            public ReceiveMessageHandler(ServerSideViewModel outer)
             {
-                return;
+                this.Outer = outer;
+                this.IsActive = false;
             }
 
-            while (true)
+            public void RequireStart()
             {
-                // remove not available client socket.
-                this.ClientSockets.RemoveAll((s) => !s.IsConnected());
+                this.IsActive = true;
+                this.Outer.IsServerThreadActive = true;
+            }
 
-                try
+            public void RequireStop()
+            {
+                this.IsActive = false;
+                this.Outer.IsServerThreadActive = false;
+            }
+
+            /// <summary>
+            /// Receive client message
+            /// </summary>
+            /// <param name="clientSocket">client socket</param>
+            public void ReceiveMessage(object clientSocket)
+            {
+                if (!(clientSocket is Socket connection))
                 {
-                    byte[] buffer = new byte[1024]; // buffer
-                    int receiveNumber = connection.Receive(buffer);
-                    string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
+                    return;
+                }
 
-                    if (!(connection.RemoteEndPoint is IPEndPoint ipEndPoint))
+                while (this.IsActive)
+                {
+                    // remove not available client socket.
+                    this.Outer.ClientSockets.RemoveAll((s) => !s.IsAvialable());
+
+                    try
                     {
-                        continue;
-                    }
+                        byte[] buffer = new byte[1024]; // buffer
+                        int receiveNumber = connection.Receive(buffer);
+                        string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
 
-                    IPAddress clientIp = ipEndPoint.Address;
-                    int clientPort = ipEndPoint.Port;
-
-                    string sendMessage = $"{clientIp} : {clientPort} ---> {receiveString}";
-                    foreach (Socket socket in this.ClientSockets) // send message to all client.
-                    {
-                        if (!socket.IsConnected()) // skip not available socket.
+                        if (!(connection.RemoteEndPoint is IPEndPoint ipEndPoint))
                         {
                             continue;
                         }
 
-                        socket.Send(Encoding.UTF8.GetBytes(sendMessage));
-                    }
+                        IPAddress clientIp = ipEndPoint.Address;
+                        int clientPort = ipEndPoint.Port;
 
-                    this.ClientMessages.Add(sendMessage);
-                }
-                catch (Exception e)
-                {
-                    if (e.Message == "遠端主機已強制關閉一個現存的連線。")
-                    {
-                        IPEndPoint endPoint = this.ClientSockets.Find((s) => !s.IsConnected()).RemoteEndPoint as IPEndPoint;
-                        this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} closed");
-                    }
-                    else
-                    {
-                        this.ClientMessages.Add(e.Message);
-                    }
+                        string sendMessage = $"{clientIp} : {clientPort} ---> {receiveString}";
+                        foreach (Socket socket in this.Outer.ClientSockets) // send message to all client.
+                        {
+                            if (!socket.IsAvialable()) // skip not available socket.
+                            {
+                                continue;
+                            }
 
-                    break;
+                            socket.Send(Encoding.UTF8.GetBytes(sendMessage));
+                        }
+
+                        this.Outer.ClientMessages.Add(sendMessage);
+                    }
+                    catch (Exception e)
+                    {
+                        if (e.Message == "遠端主機已強制關閉一個現存的連線。")
+                        {
+                            IPEndPoint endPoint = this.Outer.ClientSockets.Find((s) => !s.IsAvialable()).RemoteEndPoint as IPEndPoint;
+                            this.Outer.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} closed");
+                        }
+                        else
+                        {
+                            this.Outer.ClientMessages.Add(e.Message);
+                        }
+
+                        break;
+                    }
                 }
             }
         }

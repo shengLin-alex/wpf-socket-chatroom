@@ -4,7 +4,7 @@ namespace SocketApp.ChatRoom.Helper
 {
     public static class SocketExtensions
     {
-        public static bool IsConnected(this Socket socket)
+        public static bool IsAvialable(this Socket socket)
         {
             try
             {
