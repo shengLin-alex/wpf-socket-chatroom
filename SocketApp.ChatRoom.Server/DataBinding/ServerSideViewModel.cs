@@ -106,8 +106,6 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                 if (disposing)
                 {
                     this.Handler?.RequireStop(); // set thread volatile flag false
-                    this.ServerThread?.Interrupt();
-                    this.ServerSocket?.Close();
                 }
             }
         }
@@ -145,6 +143,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             }
             catch (Exception e)
             {
+                this.Logger.LogError($"{e.GetType()};{e.Message}");
                 this.ClientMessages.Add(e.Message);
 
                 return;
@@ -181,7 +180,12 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                 }
                 catch (Exception e)
                 {
-                    this.ClientMessages.Add(e.Message);
+                    this.Logger.LogError($"{e.GetType()};{e.Message}");
+                }
+                finally
+                {
+                    this.ServerSocket?.Close();
+                    this.ClientSockets.ForEach(s => s.Close());
                 }
             })
             {
@@ -229,6 +233,13 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                     {
                         byte[] buffer = new byte[1024]; // buffer
                         int receiveNumber = connection.Receive(buffer);
+
+                        if (receiveNumber == 0) // client 斷線
+                        {
+                            this.Outer.ClientSockets.Remove(connection);
+                            continue;
+                        }
+
                         string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
 
                         if (!(connection.RemoteEndPoint is IPEndPoint ipEndPoint))
@@ -264,7 +275,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                     }
                     else
                     {
-                        this.Outer.ClientMessages.Add(e.Message);
+                        this.Outer.Logger.LogError($"{e.GetType()};{e.Message}");
                     }
                 }
             }

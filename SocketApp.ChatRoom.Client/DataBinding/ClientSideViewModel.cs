@@ -60,7 +60,6 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 if (disposing)
                 {
                     this.Handler?.RequireStop();
-                    this.ClientSocket?.Close();
                 }
             }
         }
@@ -138,6 +137,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             }
             catch (Exception e)
             {
+                this.Logger.LogError($"{e.GetType()};{e.Message}");
                 this.IsSendMessageButtonEnable = false;
                 this.ReceivedMessages.Add(e.Message);
             }
@@ -155,6 +155,7 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 }
                 catch (Exception e)
                 {
+                    this.Logger.LogError($"{e.GetType()};{e.Message}");
                     this.ReceivedMessages.Add(e.Message);
                 }
             })
@@ -201,9 +202,14 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 }
                 catch (Exception e)
                 {
+                    this.Outer.Logger.LogError($"{e.GetType()};{e.Message}");
                     this.Outer.ReceivedMessages.Add(e.Message);
                     this.Outer.IsSendMessageButtonEnable = false;
                     this.Outer.IsConnectButtonEnable = false;
+                }
+                finally
+                {
+                    this.Outer.ClientSocket?.Close();
                 }
             }
         }

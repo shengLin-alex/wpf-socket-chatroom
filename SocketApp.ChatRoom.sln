@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketApp.ChatRoom.Client",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketApp.ChatRoom.Helper", "SocketApp.ChatRoom.Helper\SocketApp.ChatRoom.Helper.csproj", "{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketApp.ChatRoom.Test", "SocketApp.ChatRoom.Test\SocketApp.ChatRoom.Test.csproj", "{64C04575-A167-4516-ACD3-6DD0781CCDCB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D07CD0DF-E025-401C-91C1-D8C1FAE55A17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64C04575-A167-4516-ACD3-6DD0781CCDCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64C04575-A167-4516-ACD3-6DD0781CCDCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64C04575-A167-4516-ACD3-6DD0781CCDCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64C04575-A167-4516-ACD3-6DD0781CCDCB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
