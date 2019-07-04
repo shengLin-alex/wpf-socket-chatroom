@@ -23,7 +23,6 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         private Thread ServerThread;
         private readonly ServerThreadHandler Handler;
         private volatile bool IsServerThreadActive;
-        private readonly object SyncRoot = new object();
 
         /// <summary>
         /// The server socket
@@ -101,12 +100,9 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
         protected virtual void Dispose(bool disposing)
         {
-            lock (this.SyncRoot)
+            if (disposing)
             {
-                if (disposing)
-                {
-                    this.Handler?.RequireStop(); // set thread volatile flag false
-                }
+                this.Handler?.RequireStop(); // set thread volatile flag false
             }
         }
 
@@ -221,7 +217,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
             /// <summary>
             /// Receive client message
             /// </summary>
-            /// <param name="clientSocket">client socket</param>
+            /// <param name="connection">client socket</param>
             public void ReceiveMessage(Socket connection)
             {
                 try

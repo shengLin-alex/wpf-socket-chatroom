@@ -17,7 +17,6 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         // thread
         private readonly ClientThreadHandler Handler;
-        private readonly object SyncRoot = new object();
 
         // socket setting
         private readonly Socket ClientSocket;
@@ -55,21 +54,15 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         protected virtual void Dispose(bool disposing)
         {
-            lock (this.SyncRoot)
+            if (disposing)
             {
-                if (disposing)
-                {
-                    this.Handler?.RequireStop();
-                }
+                this.Handler?.RequireStop();
             }
         }
 
         public string MessageInput
         {
-            get
-            {
-                return this.BindingData.MessageInput;
-            }
+            get => this.BindingData.MessageInput;
             set
             {
                 this.BindingData.MessageInput = value;
