@@ -170,7 +170,7 @@ namespace SocketApp.ChatRoom.Server.DataBinding
                 if (asyncResult.AsyncState is Socket client)
                 {
                     int byteRead = client.EndReceive(asyncResult);
-                    this.ClientSockets.RemoveAll(s => !s.IsAvialable());
+                    this.ClientSockets.RemoveAll(s => !s.IsAvailable()); // remove unavailable sockets
                     string receiveString = Encoding.UTF8.GetString(this.ByteData, 0, byteRead);
 
                     if (!(client.RemoteEndPoint is IPEndPoint ipEndPoint))
@@ -184,16 +184,15 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
                     foreach (Socket conn in this.ClientSockets)
                     {
-                        if (!conn.IsAvialable())
+                        if (!conn.IsAvailable())
                         {
                             continue;
                         }
                         byte[] message = Encoding.UTF8.GetBytes(sendMessage);
                         conn.BeginSend(message, 0, message.Length, SocketFlags.None, new AsyncCallback(this.OnSend), conn);
                     }
-
-                    client.BeginReceive(this.ByteData, 0, this.ByteData.Length, SocketFlags.None, new AsyncCallback(this.OnReceive), client);
                     this.ClientMessages.Add(sendMessage);
+                    client.BeginReceive(this.ByteData, 0, this.ByteData.Length, SocketFlags.None, new AsyncCallback(this.OnReceive), client);
                 }
             }
             catch (Exception e)

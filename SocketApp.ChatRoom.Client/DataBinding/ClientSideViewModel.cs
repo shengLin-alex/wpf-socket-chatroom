@@ -5,7 +5,6 @@ using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Client.DataBinding
@@ -15,13 +14,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         // logger
         private readonly ILogger<ClientSideViewModel> Logger;
 
-        // thread
-        private readonly ClientThreadHandler Handler;
-
         // socket setting
         private readonly Socket ClientSocket;
         private const int PORT = 7000;
         private const string IP = "127.0.0.1";
+        private byte[] ByteData;
 
         // data model
         private readonly BindingDataModel BindingData;
@@ -31,8 +28,9 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             this.Logger = logger;
             this.BindingData = new BindingDataModel();
             this.ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.ByteData = new byte[1024];
+
             this.ReceivedMessages = new AsyncObservableCollection<string>(App.Current.Dispatcher);
-            this.Handler = new ClientThreadHandler(this);
         }
 
         public AsyncObservableCollection<string> ReceivedMessages { get; private set; }
@@ -54,10 +52,6 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                this.Handler?.RequireStop();
-            }
         }
 
         public string MessageInput
@@ -112,17 +106,10 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         private void ConnectToServer()
         {
-            IPAddress ip = IPAddress.Parse(IP);
-
             try
             {
-                this.ClientSocket.Connect(new IPEndPoint(ip, PORT));
-                this.Handler.RequireStart();
-                Thread receiveThread = new Thread(() => this.Handler.ReceiveMessage(this.ClientSocket))
-                {
-                    IsBackground = true // make thread background, for avoiding process not really shutdown.
-                };
-                receiveThread.Start();
+                IPAddress ip = IPAddress.Parse(IP);
+                this.ClientSocket.BeginConnect(new IPEndPoint(ip, PORT), new AsyncCallback(this.OnConnect), this.ClientSocket);
 
                 this.IsSendMessageButtonEnable = true;
                 this.IsConnectButtonEnable = false;
@@ -136,74 +123,75 @@ namespace SocketApp.ChatRoom.Client.DataBinding
             }
         }
 
-        private void SendMessage()
+        private void OnConnect(IAsyncResult asyncResult)
         {
-            string text = this.MessageInput;
-
-            Thread sendMessageThread = new Thread(() =>
+            try
             {
-                try
+                if (asyncResult.AsyncState is Socket client)
                 {
-                    this.ClientSocket.Send(Encoding.UTF8.GetBytes(text));
+                    client.EndConnect(asyncResult);
+                    client.BeginReceive(this.ByteData, 0, this.ByteData.Length, SocketFlags.None, new AsyncCallback(this.OnReceive), client);
                 }
-                catch (Exception e)
-                {
-                    this.Logger.LogError($"{e.GetType()};{e.Message}");
-                    this.ReceivedMessages.Add(e.Message);
-                }
-            })
+            }
+            catch (Exception e)
             {
-                IsBackground = true
-            };
-
-            sendMessageThread.Start();
+                this.Logger.LogError($"{e.GetType()};{e.Message}");
+                this.IsSendMessageButtonEnable = false;
+                this.ReceivedMessages.Add(e.Message);
+            }
         }
 
-        private class ClientThreadHandler
+        private void OnReceive(IAsyncResult asyncResult)
         {
-            private readonly ClientSideViewModel Outer;
-
-            private volatile bool IsActive;
-
-            public ClientThreadHandler(ClientSideViewModel outer)
+            try
             {
-                this.Outer = outer;
-            }
-
-            public void RequireStart()
-            {
-                this.IsActive = true;
-            }
-
-            public void RequireStop()
-            {
-                this.IsActive = false;
-            }
-
-            public void ReceiveMessage(Socket connection)
-            {
-                try
+                if (asyncResult.AsyncState is Socket client)
                 {
-                    while (this.IsActive)
-                    {
-                        byte[] buffer = new byte[1024];
-                        int receiveNumber = connection.Receive(buffer);
+                    int byteRead = client.EndReceive(asyncResult);
+                    string receiveString = Encoding.UTF8.GetString(this.ByteData, 0, byteRead);
+                    this.ReceivedMessages.Add(receiveString);
 
-                        string receiveString = Encoding.UTF8.GetString(buffer, 0, receiveNumber);
-                        this.Outer.ReceivedMessages.Add(receiveString);
-                    }
+                    client.BeginReceive(this.ByteData, 0, this.ByteData.Length, SocketFlags.None, new AsyncCallback(this.OnReceive), client);
                 }
-                catch (Exception e)
+            }
+            catch (Exception e)
+            {
+                this.Logger.LogError($"{e.GetType()};{e.Message}");
+                this.IsSendMessageButtonEnable = false;
+                this.ReceivedMessages.Add(e.Message);
+            }
+        }
+
+        private void SendMessage()
+        {
+            try
+            {
+                string inputMessage = this.MessageInput;
+                byte[] message = Encoding.UTF8.GetBytes(inputMessage);
+                this.ClientSocket.BeginSend(message, 0, message.Length, SocketFlags.None, new AsyncCallback(this.OnSend), this.ClientSocket);
+            }
+            catch (Exception e)
+            {
+                this.Logger.LogError($"{e.GetType()};{e.Message}");
+                this.IsSendMessageButtonEnable = false;
+                this.ReceivedMessages.Add(e.Message);
+            }
+        }
+
+        private void OnSend(IAsyncResult asyncResult)
+        {
+            try
+            {
+                if (asyncResult.AsyncState is Socket client)
                 {
-                    this.Outer.Logger.LogError($"{e.GetType()};{e.Message}");
-                    this.Outer.ReceivedMessages.Add(e.Message);
-                    this.Outer.IsSendMessageButtonEnable = false;
-                    this.Outer.IsConnectButtonEnable = false;
+                    client.EndSend(asyncResult);
                 }
-                finally
-                {
-                    this.Outer.ClientSocket?.Close();
-                }
+            }
+            catch (Exception e)
+            {
+                this.Logger.LogError($"{e.GetType()};{e.Message}");
+                this.IsSendMessageButtonEnable = false;
+                this.ReceivedMessages.Add(e.Message);
             }
         }
     }
