@@ -15,29 +15,13 @@ namespace SocketApp.ChatRoom.Server.DataBinding
     /// </summary>
     public class ServerSideViewModel : IServerSideViewModel, INotifyPropertyChanged, IDisposable
     {
-        // logger
         private readonly ILogger<ServerSideViewModel> Logger;
 
-        /// <summary>
-        /// The server socket
-        /// </summary>
         private readonly Socket ServerSocket;
-
-        /// <summary>
-        /// The client sockets
-        /// </summary>
         private readonly List<Socket> ClientSockets;
-
         private byte[] ByteData;
 
-        /// <summary>
-        /// Server port
-        /// </summary>
         private const int PORT = 7000;
-
-        /// <summary>
-        /// Server IP address
-        /// </summary>
         private const string IP = "127.0.0.1";
 
         private bool IsStartButtonEnableField = true;
