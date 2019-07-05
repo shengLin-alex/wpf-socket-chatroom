@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Server.DataBinding
@@ -19,6 +20,8 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
         private readonly Socket ServerSocket;
         private readonly List<Socket> ClientSockets;
+        private static ManualResetEvent AllDone = new ManualResetEvent(false);
+        private volatile bool IsListening;
         private byte[] ByteData;
 
         private const int PORT = 7000;
@@ -82,6 +85,10 @@ namespace SocketApp.ChatRoom.Server.DataBinding
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+                this.StopServer();
+            }
         }
 
         /// <summary>
@@ -107,21 +114,46 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         /// </summary>
         private void StartServer()
         {
-            // localhost ip
-            IPAddress ip = IPAddress.Parse(IP);
+            this.IsListening = true;
+            Thread listening = new Thread(this.OnListening)
+            {
+                IsBackground = true
+            };
+            listening.Start();
+            this.IsStartButtonEnable = false;
+            this.ClientMessages.Add("Start listening...");
+        }
 
+        private void StopServer()
+        {
+            AllDone.Set();
+            this.IsListening = false;
+        }
+
+        private void OnListening()
+        {
             try
             {
+                IPAddress ip = IPAddress.Parse(IP);
                 this.ServerSocket.Bind(new IPEndPoint(ip, PORT)); // bind port 7000
                 this.ServerSocket.Listen(10);
-                this.ServerSocket.BeginAccept(new AsyncCallback(this.OnAccept), null);
-                this.IsStartButtonEnable = false;
-                this.ClientMessages.Add("Start listening...");
+
+                while (this.IsListening)
+                {
+                    AllDone.Reset();
+                    this.ServerSocket.BeginAccept(new AsyncCallback(this.OnAccept), null);
+                    AllDone.WaitOne();
+                }
             }
             catch (Exception e)
             {
                 this.Logger.LogError($"{e.GetType()};{e.Message}");
                 this.ClientMessages.Add(e.Message);
+            }
+            finally
+            {
+                this.ServerSocket.Close();
+                this.ClientSockets.ForEach(s => s.Close());
             }
         }
 
@@ -129,15 +161,19 @@ namespace SocketApp.ChatRoom.Server.DataBinding
         {
             try
             {
+                AllDone.Set();
+                if (!this.IsListening)
+                {
+                    return;
+                }
+
                 Socket client = this.ServerSocket.EndAccept(asyncResult);
                 this.ClientSockets.Add(client);
                 if (client.RemoteEndPoint is IPEndPoint endPoint)
                 {
                     this.ClientMessages.Add($"Connection {endPoint.Address}:{endPoint.Port} connected.");
                 }
-
-                // start listening for more clients
-                this.ServerSocket.BeginAccept(new AsyncCallback(this.OnAccept), null);
+                
                 client.BeginReceive(this.ByteData, 0, this.ByteData.Length, SocketFlags.None, new AsyncCallback(this.OnReceive), client);
             }
             catch (Exception e)

@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Windows.Input;
 
 namespace SocketApp.ChatRoom.Client.DataBinding
@@ -19,6 +20,9 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         private const int PORT = 7000;
         private const string IP = "127.0.0.1";
         private byte[] ByteData;
+
+        private volatile bool IsConnecting;
+        private static ManualResetEvent AllDone = new ManualResetEvent(false);
 
         // data model
         private readonly BindingDataModel BindingData;
@@ -52,6 +56,11 @@ namespace SocketApp.ChatRoom.Client.DataBinding
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+                AllDone.Set();
+                this.IsConnecting = false;
+            }
         }
 
         public string MessageInput
@@ -108,12 +117,21 @@ namespace SocketApp.ChatRoom.Client.DataBinding
         {
             try
             {
-                IPAddress ip = IPAddress.Parse(IP);
-                this.ClientSocket.BeginConnect(new IPEndPoint(ip, PORT), new AsyncCallback(this.OnConnect), this.ClientSocket);
-
+                this.IsConnecting = true;
                 this.IsSendMessageButtonEnable = true;
                 this.IsConnectButtonEnable = false;
                 this.Logger.LogInformation("Server Start");
+
+                Thread receiving = new Thread(() =>
+                {
+                    IPAddress ip = IPAddress.Parse(IP);
+                    this.ClientSocket.BeginConnect(new IPEndPoint(ip, PORT), new AsyncCallback(this.OnConnect), this.ClientSocket);
+                })
+                {
+                    IsBackground = true
+                };
+
+                receiving.Start();
             }
             catch (Exception e)
             {
@@ -130,7 +148,13 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 if (asyncResult.AsyncState is Socket client)
                 {
                     client.EndConnect(asyncResult);
-                    client.BeginReceive(this.ByteData, 0, this.ByteData.Length, SocketFlags.None, new AsyncCallback(this.OnReceive), client);
+
+                    while (this.IsConnecting)
+                    {
+                        AllDone.Reset();
+                        client.BeginReceive(this.ByteData, 0, this.ByteData.Length, SocketFlags.None, new AsyncCallback(this.OnReceive), client);
+                        AllDone.WaitOne();
+                    }
                 }
             }
             catch (Exception e)
@@ -139,19 +163,27 @@ namespace SocketApp.ChatRoom.Client.DataBinding
                 this.IsSendMessageButtonEnable = false;
                 this.ReceivedMessages.Add(e.Message);
             }
+            finally
+            {
+                this.ClientSocket.Close();
+            }
         }
 
         private void OnReceive(IAsyncResult asyncResult)
         {
             try
             {
+                AllDone.Set();
+                if (!this.IsConnecting)
+                {
+                    return;
+                }
+
                 if (asyncResult.AsyncState is Socket client)
                 {
                     int byteRead = client.EndReceive(asyncResult);
                     string receiveString = Encoding.UTF8.GetString(this.ByteData, 0, byteRead);
                     this.ReceivedMessages.Add(receiveString);
-
-                    client.BeginReceive(this.ByteData, 0, this.ByteData.Length, SocketFlags.None, new AsyncCallback(this.OnReceive), client);
                 }
             }
             catch (Exception e)
